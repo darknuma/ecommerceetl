@@ -1,0 +1,62 @@
+# use s3
+# use duckdb
+# use snowflake
+# use airflow
+# use great expectations
+
+version: '3'
+
+services:
+  airflow:
+    build: ./airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    ports:
+      - "8080:8080"
+    depends_on:
+      - duckdb
+      - snowflake
+      - dbt
+      - great_expectations
+
+  duckdb:
+    build: ./duckdb
+    volumes:
+      - ./data:/data
+      - ./duckdb/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  snowflake:
+    build: ./snowflake
+    environment:
+      - SNOWFLAKE_ACCOUNT=your_account
+      - SNOWFLAKE_USER=your_user
+      - SNOWFLAKE_PASSWORD=your_password
+      - SNOWFLAKE_DATABASE=your_database
+      - SNOWFLAKE_WAREHOUSE=your_warehouse
+
+  dbt:
+    build: ./dbt
+    volumes:
+      - ./dbt:/dbt
+    depends_on:
+      - snowflake
+
+  great_expectations:
+    build: ./great_expectations
+    volumes:
+      - ./great_expectations:/great_expectations
+    depends_on:
+      - duckdb
+      - snowflake
+
+  superset:
+    build: ./superset
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./superset/dashboards:/app/superset_home/dashboards
+    depends_on:
+      - snowflake
+
+volumes:
+  airflow_logs:
